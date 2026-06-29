@@ -9,6 +9,14 @@ class Order
   MAX_VALIDATION_ATTEMPTS = 3
   INITIAL_STATE = "pending"
   FINAL_STATES = %w[installed failed].freeze
+  TRANSITIONS = {
+    "pending"    => { start_validation: "validating", cancel: "failed" },
+    "validating" => { validate_ok: "issued", validate_fail: "validating", cancel: "failed" },
+    "issued"     => { install: "installed", cancel: "failed" },
+    "installed"  => {},
+    "failed"     => {},
+  }.freeze
+
   # Levante isto numa transição não permitida (sugestão de nome).
   class InvalidTransition < StandardError; end
 
@@ -29,7 +37,7 @@ class Order
   def apply(event)
     validate_transition!(event)
     transition(event)
-    status
+    @status
   end
 
   # true se o pedido está em um estado final (installed ou failed).
@@ -44,7 +52,7 @@ class Order
 
     def validate!(domain:, provider:)
       raise ArgumentError, "Domain deve ser um nome de domínio válido" unless valid_domain?(domain)
-      raise ArgumentError, "provider deve ser um dos seguintes: #{PROVIDERS.join(', ')}" unless PROVIDERS.include?(provider)
+      raise ArgumentError, "'#{provider}' não é um provider válido. Use um de: #{PROVIDERS.join(', ')}" unless PROVIDERS.include?(provider)
     end
 
     def valid_domain?(domain)
@@ -52,25 +60,13 @@ class Order
     end
 
     def valid_transition?(event)
-      case event
-      when :start_validation then status == "pending"
-      when :validate_ok      then status == "validating"
-      when :validate_fail    then status == "validating"
-      when :install          then status == "issued"
-      when :cancel           then !final?
-      else false
-      end
+      TRANSITIONS[@status].key?(event)
     end
 
     def transition(event)
-      case event
-      when :start_validation then @status = "validating"
-      when :validate_ok      then @status = "issued"
-      when :validate_fail
-        @validation_attempts += 1
-        @status = "failed" if @validation_attempts >= MAX_VALIDATION_ATTEMPTS
-      when :install          then @status = "installed"
-      when :cancel           then @status = "failed"
-      end
+      return @status = TRANSITIONS[@status][event] if event != :validate_fail
+
+      @validation_attempts += 1
+      @status = @validation_attempts >= MAX_VALIDATION_ATTEMPTS ? "failed" : "validating"
     end
 end
