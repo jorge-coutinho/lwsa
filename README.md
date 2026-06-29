@@ -1,9 +1,12 @@
-## Como rodar
+## Como rodar as specs
 
 ```bash
 bundle install
 bundle exec rspec
 ```
+
+## Decisões de design:
+R - Optei por manter toda a logica na classe Order para manter a simplicidade. Criei uma hash para mapear os estados e os eventos permitidos em cada estado, centralizando a lógica de transição de estado e facilitando a manutenção e extensibilidade do código. Adicionei validacoes tanto para a instanciacao da classe Order quanto para a transicao de estado. Para metodos de validacao, utilizei metodos com ! para indicar que em caso de falha, uma excecao deve ser lancada. Tambem adicionei os devidos metodos booleanos para validar o estado atual e os eventos permitidos em cada estado. Specs tambem foram escritos para garantir o correto funcionamento da classe Order.
 
 ## Parte 2 — Cenário & tecnologias (curta)
 
